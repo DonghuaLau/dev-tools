@@ -1,0 +1,92 @@
+#!/usr/bin/env python
+# -*- coding:utf-8 -*-
+
+import os
+os.path.join(os.path.dirname(__file__))
+import pexpect
+import sys
+import poplib
+import email
+import string
+import time
+import fcntl
+import termios
+import struct
+
+hosts_list = [
+		['group 1',
+			('host1', 'root', 'password1')
+			('host2', 'root', 'password2')
+		],
+		['group 2',
+			('host3', 'root1', 'password1'),
+			('host4', 'root2', 'password2')
+		]
+	];
+
+def list_hosts():
+	index = 0
+	for group in hosts_list:
+		glen = len(group)
+		nums = range(1, glen)
+		print "%s:" % group[0]
+		for i in nums:
+			index += 1
+			print "\t%d - %s" % (index, group[i][0])
+	print "\n(Input the index before \'host\' for login.)\n"
+
+def get_host(index):
+	idx = 0
+	for group in hosts_list:
+		glen = len(group)
+		nums = range(1, glen)
+		for i in nums:
+			idx += 1
+			if index == idx:
+				return group[i]
+
+def autossh(host, user, passwd):
+	cmd = 'ssh %s@%s' % (user, host)
+	child = pexpect.spawn(cmd)
+	
+	s = struct.pack('HHHH', 0, 0, 0, 0)
+	a = struct.unpack('HHHH', fcntl.ioctl(sys.stdout.fileno(), termios.TIOCGWINSZ, s))
+	if a[0] != 0 and a[1] != 0:
+	    child.setwinsize(a[0], a[1])
+	
+	
+	no_permission = False
+	
+	while True:
+		i = child.expect(['password:', '(yes/no)', '#', '$', 'Permission denied \(', pexpect.EOF, pexpect.TIMEOUT])
+		if i == 0:
+			child.sendline(passwd)
+		elif i == 1:
+			child.sendline("yes")
+			time.sleep(1) # should better wait a moment
+		elif i == 2:
+			break
+		elif i == 3:
+			break
+		elif i == 4:
+			print "Permission denied, check your password or permission."
+			break
+		else:
+			print "unknown expect."
+			break
+
+	child.sendline('echo -ne \"\\033]2;$HOSTNAME\\007\"')
+	child.sendline('LANG=en_US.utf-8')
+	try:
+	    child.interact()
+	except:
+	    pass
+
+if __name__ == '__main__':
+    #host = sys.argv[1]
+	if len(sys.argv) != 2:
+		list_hosts()
+	else:
+		index = int(sys.argv[1])
+		host = get_host(index)
+		autossh(host[0], host[1], host[2])
