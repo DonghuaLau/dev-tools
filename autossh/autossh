@@ -15,7 +15,7 @@ import struct
 
 hosts_list = [
 		['group 1',
-			('host1', 'root', 'password1')
+			('host1', 'root', 'password1'),
 			('host2', 'root', 'password2')
 		],
 		['group 2',
@@ -58,12 +58,13 @@ def autossh(host, user, passwd):
 	no_permission = False
 	
 	while True:
+		time.sleep(1) # should better wait a moment here
 		i = child.expect(['password:', '(yes/no)', '#', '$', 'Permission denied \(', pexpect.EOF, pexpect.TIMEOUT])
+		print i
 		if i == 0:
 			child.sendline(passwd)
 		elif i == 1:
 			child.sendline("yes")
-			time.sleep(1) # should better wait a moment
 		elif i == 2:
 			break
 		elif i == 3:
